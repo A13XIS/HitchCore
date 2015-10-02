@@ -52,6 +52,7 @@ public class HitchCommand extends CommandBase
             }
             else if ("config".equals(args[0]))
             {
+                // TODO (hitch) if the updated config option requires restart the command should alerts the operator(s)
                 if (args.length > 2)
                 {
                     boolean isClient = false;

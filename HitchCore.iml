@@ -7,6 +7,6 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="ForgeDeps" exported="" />
+    <orderEntry type="module" module-name="Forge-1.8-11.14.3.1450" exported="" />
   </component>
 </module>

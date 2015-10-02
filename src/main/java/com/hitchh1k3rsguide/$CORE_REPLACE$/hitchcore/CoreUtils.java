@@ -21,7 +21,10 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 public class CoreUtils
@@ -137,17 +140,17 @@ public class CoreUtils
         {
             for (String mod : HitchCore.currentVersions.keySet())
             {
-                if (HitchCore.versions.get(mod) < HitchCore.currentVersions.get(mod))
+                if (HitchCore.versions.get(mod).compareTo(HitchCore.currentVersions.get(mod)) < 0)
                 {
                     HitchCore.changeLogs.put(mod, apiGetChangeLog(mod));
                 }
             }
             for (String mod : HitchCore.currentVersions.keySet())
             {
-                if (HitchCore.versions.get(mod) < HitchCore.currentVersions.get(mod))
+                if (HitchCore.versions.get(mod).compareTo(HitchCore.currentVersions.get(mod)) < 0)
                 {
                     String modName = localize("itemGroup." + mod);
-                    lines.add(new Tuple(HitchCore.MODID + ".update.change.list", new Object[]{ modName, intToVersion(HitchCore.versions.get(mod)), intToVersion(HitchCore.currentVersions.get(mod)) }));
+                    lines.add(new Tuple(HitchCore.MODID + ".update.change.list", new Object[]{ modName, HitchCore.versions.get(mod).verStr, HitchCore.currentVersions.get(mod).verStr }));
                     for (String line : HitchCore.changeLogs.get(mod))
                     {
                         lines.add(new Tuple(null, "\u00A78 - " + line));
@@ -205,7 +208,7 @@ public class CoreUtils
 
     public static String[] apiGetChangeLog(String mod)
     {
-        String data = readURL(String.format(URL_API_CHANGELOG, mod, intToVersion(HitchCore.versions.get(mod))));
+        String data = readURL(String.format(URL_API_CHANGELOG, mod, HitchCore.versions.get(mod).verStr));
         if (!"".equals(data) && !"BAD REQUEST".equals(data))
         {
             return data.split("\\n");
@@ -213,14 +216,14 @@ public class CoreUtils
         return new String[0];
     }
 
-    public static int apiGetVersion(String mod)
+    public static VersionInfo apiGetVersion(String mod)
     {
         String data = readURL(String.format(URL_API_VERSION, mod));
         if (!"".equals(data) && !"BAD REQUEST".equals(data))
         {
             try
             {
-                return versionToInt(data);
+                return new VersionInfo(data);
             }
             catch (Exception ignored) {}
         }
@@ -240,11 +243,9 @@ public class CoreUtils
             try
             {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(CoreUtils.class.getClassLoader().getResourceAsStream("assets/" + mod + "/lang/en_US.lang"), "UTF-8"));
-                Iterator<String> it = reader.lines().iterator();
-                while (it.hasNext())
+                String s;
+                while ((s = reader.readLine()) != null)
                 {
-                    String s = it.next();
-
                     if (!s.isEmpty() && s.charAt(0) != 35)
                     {
                         String[] astring = Iterables.toArray(splitter.split(s), String.class);
@@ -278,6 +279,8 @@ public class CoreUtils
         return "";
     }
 
+    // TODO (hitch) make sure calls to this don't do a double debug check!!!
+
     public static void debugErr(String message)
     {
         if (CoreConfig.debugMode)
@@ -294,24 +297,26 @@ public class CoreUtils
         }
     }
 
-    public static int versionToInt(String version)
-    {
-        String[] v = version.split("\\.");
-        int[] vi = new int[3];
-        for (int i = 0; i < v.length; ++i)
+    /*
+        public static int versionToInt(String version)
         {
-            vi[i] = Integer.parseInt(v[i]);
+            String[] v = version.split("\\.");
+            int[] vi = new int[3];
+            for (int i = 0; i < v.length; ++i)
+            {
+                vi[i] = Integer.parseInt(v[i]);
+            }
+            return (vi[0] * 10000) + (vi[1] * 100) + (vi[2]);
         }
-        return (vi[0] * 10000) + (vi[1] * 100) + (vi[2]);
-    }
 
-    public static String intToVersion(int version)
-    {
-        int ver = version / 10000;
-        int maj = (version - (ver * 10000)) / 100;
-        int min = version - (ver * 10000) - (maj * 100);
-        return ver + "." + maj + (min > 0 ? "." + min : "");
-    }
+        public static String intToVersion(int version)
+        {
+            int ver = version / 10000;
+            int maj = (version - (ver * 10000)) / 100;
+            int min = version - (ver * 10000) - (maj * 100);
+            return ver + "." + maj + (min > 0 ? "." + min : "");
+        }
+    */
 
     public static String readURL(String url)
     {
@@ -373,9 +378,9 @@ public class CoreUtils
         {
             for (String mod : HitchCore.currentVersions.keySet())
             {
-                if (HitchCore.versions.get(mod) < HitchCore.currentVersions.get(mod))
+                if (HitchCore.versions.get(mod).compareTo(HitchCore.currentVersions.get(mod)) < 0)
                 {
-                    tellLocalPlayer(localize(HitchCore.MODID + ".update.nag", localize("itemGroup." + mod), intToVersion(HitchCore.versions.get(mod)), intToVersion(HitchCore.currentVersions.get(mod))));
+                    tellLocalPlayer(localize(HitchCore.MODID + ".update.nag", localize("itemGroup." + mod), HitchCore.versions.get(mod).verStr, HitchCore.currentVersions.get(mod).verStr));
                 }
             }
             tellLocalPlayer(localize(HitchCore.MODID + ".update.change.prompt"));
@@ -406,11 +411,11 @@ public class CoreUtils
 
         if (FMLCommonHandler.instance().getSide().isServer())
         {
-            logger.error("To try running with the failed patches restart the server with the JVM argument: -Dmakersmark.ignorePatchFailure=true");
             if (failureStatus > 1 || !Boolean.parseBoolean(System.getProperty(modid + ".ignorePatchFailure", "false")))
             {
                 FMLCommonHandler.instance().exitJava(1, true);
             }
+            logger.error("To try running with the failed patches restart the server with the JVM argument: -D" + modid + ".ignorePatchFailure=true");
         }
         else if (!Boolean.parseBoolean(System.getProperty(modid + ".ignorePatchFailure", "false")))
         {

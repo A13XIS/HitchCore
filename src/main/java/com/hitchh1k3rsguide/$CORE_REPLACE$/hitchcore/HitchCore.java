@@ -30,11 +30,11 @@ public class HitchCore extends DummyModContainer implements IModHandler
 
     public static SimpleNetworkWrapper netWrapper;
 
-    public static Map<String, Integer>  versions            = new HashMap<String, Integer>();
-    public static Map<String, Integer>  currentVersions     = new HashMap<String, Integer>();
-    public static Map<String, String[]> changeLogs          = new HashMap<String, String[]>();
-    public static boolean               hasCheckedForUpdate = false;
-    public static boolean               hasUpdates          = false;
+    public static Map<String, VersionInfo> versions            = new HashMap<String, VersionInfo>();
+    public static Map<String, VersionInfo> currentVersions     = new HashMap<String, VersionInfo>();
+    public static Map<String, String[]>    changeLogs          = new HashMap<String, String[]>();
+    public static boolean                  hasCheckedForUpdate = false;
+    public static boolean                  hasUpdates          = false;
 
     public HitchCore()
     {
@@ -129,7 +129,7 @@ public class HitchCore extends DummyModContainer implements IModHandler
                 ModContainer mod = FMLCommonHandler.instance().findContainerFor(mess.getSender());
                 this.getMetadata().childMods.add(mod);
                 mod.getMetadata().parentMod = this;
-                versions.put(mess.getSender(), CoreUtils.versionToInt(mess.getStringValue()));
+                versions.put(mess.getSender(), new VersionInfo(mess.getStringValue()));
             }
             else if (mess.key.equals(MESSAGE_MOD_HANDLER))
             {
@@ -159,11 +159,11 @@ public class HitchCore extends DummyModContainer implements IModHandler
         {
             if (currentVersions.containsKey(mod) && !versions.get(mod).equals(currentVersions.get(mod)))
             {
-                ModMeta.instance.description += "  §4" + CoreUtils.localize("itemGroup." + mod) + " §c(" + CoreUtils.localize(HitchCore.MODID + ".update.description", CoreUtils.intToVersion(versions.get(mod)), CoreUtils.intToVersion(currentVersions.get(mod))) + ")\n";
+                ModMeta.instance.description += "  §4" + CoreUtils.localize("itemGroup." + mod) + " §c(" + CoreUtils.localize(HitchCore.MODID + ".update.description", versions.get(mod).verStr, currentVersions.get(mod).verStr) + ")\n";
             }
             else
             {
-                ModMeta.instance.description += "  §2" + CoreUtils.localize("itemGroup." + mod) + " §a(" + CoreUtils.intToVersion(versions.get(mod)) + ")\n";
+                ModMeta.instance.description += "  §2" + CoreUtils.localize("itemGroup." + mod) + " §a(" + versions.get(mod).verStr + ")\n";
             }
         }
 
@@ -184,10 +184,10 @@ public class HitchCore extends DummyModContainer implements IModHandler
         hasCheckedForUpdate = true;
         for (String mod : versions.keySet())
         {
-            int currentVersion = CoreUtils.apiGetVersion(mod);
-            if (currentVersion > versions.get(mod))
+            VersionInfo currentVersion = CoreUtils.apiGetVersion(mod);
+            if (currentVersion.compareTo(versions.get(mod)) > 0)
             {
-                LOGGER.info(CoreUtils.localize(HitchCore.MODID + ".update.nag", CoreUtils.localize("itemGroup." + mod), CoreUtils.intToVersion(versions.get(mod)), CoreUtils.intToVersion(currentVersion)).replaceAll("\\u00A7.", ""));
+                LOGGER.info(CoreUtils.localize(HitchCore.MODID + ".update.nag", CoreUtils.localize("itemGroup." + mod), versions.get(mod).verStr, currentVersion.verStr.replaceAll("\\u00A7.", "")));
                 currentVersions.put(mod, currentVersion);
                 hasUpdates = true;
             }

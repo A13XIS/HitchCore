@@ -31,7 +31,7 @@ public class GUIConfig extends GuiConfig
         list.add(new DummyConfigElement.DummyCategoryElement("general", HitchCore.MODID + ".configgui.general", ConfigList.class));
         for (String cat : CoreConfig.config.getCategoryNames())
         {
-            if (!"general".equals(cat) && !"advanced".equals(cat))
+            if (HitchCore.versions.keySet().contains(cat))
             {
                 final String toolName = CoreUtils.localize("itemGroup." + cat);
                 list.add(new DummyConfigElement.DummyCategoryElement(cat, "itemGroup." + cat, ConfigList.class)
