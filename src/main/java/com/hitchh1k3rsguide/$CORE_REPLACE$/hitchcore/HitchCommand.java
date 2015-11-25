@@ -6,7 +6,7 @@ import net.minecraft.command.ICommandSender;
 import net.minecraft.command.WrongUsageException;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.BlockPos;
-import net.minecraft.util.ChatComponentTranslation;
+import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.EnumChatFormatting;
 
 import java.util.Arrays;
@@ -32,7 +32,7 @@ public class HitchCommand extends CommandBase
     @Override
     public String getCommandUsage(ICommandSender sender)
     {
-        return "commands.hitch.usage";
+        return CoreUtils.localize("commands.hitch.usage");
     }
 
     @Override
@@ -42,12 +42,12 @@ public class HitchCommand extends CommandBase
         {
             if ("help".equals(args[0]))
             {
-                ChatComponentTranslation header = new ChatComponentTranslation("commands.hitch.help");
+                ChatComponentText header = new ChatComponentText(CoreUtils.localize("commands.hitch.help"));
                 header.getChatStyle().setColor(EnumChatFormatting.DARK_GREEN);
                 sender.addChatMessage(header);
-                sender.addChatMessage(new ChatComponentTranslation("commands.hitch.help.help"));
-                sender.addChatMessage(new ChatComponentTranslation("commands.hitch.help.config"));
-                sender.addChatMessage(new ChatComponentTranslation("commands.hitch.help.changes"));
+                sender.addChatMessage(new ChatComponentText(CoreUtils.localize("commands.hitch.help.help")));
+                sender.addChatMessage(new ChatComponentText(CoreUtils.localize("commands.hitch.help.config")));
+                sender.addChatMessage(new ChatComponentText(CoreUtils.localize("commands.hitch.help.changes")));
                 return;
             }
             else if ("config".equals(args[0]))
@@ -69,7 +69,7 @@ public class HitchCommand extends CommandBase
                     {
                         if ((isServer || isClient) && args.length < 4)
                         {
-                            throw new WrongUsageException("commands.hitch.help.config");
+                            throw new WrongUsageException(CoreUtils.localize("commands.hitch.help.config"));
                         }
                         for (CoreConfig.ModConfigOption configOption : CoreConfig.configOptions)
                         {
@@ -82,33 +82,33 @@ public class HitchCommand extends CommandBase
                                     Object value = deserializeString(configOption.type, args[2 + ((isClient || isServer) ? 1 : 0)]);
                                     if (value == null)
                                     {
-                                        throw new CommandException("commands.hitch.config.valueError", args[1 + ((isClient || isServer) ? 1 : 0)]);
+                                        throw new CommandException(CoreUtils.localize("commands.hitch.config.valueError", args[1 + ((isClient || isServer) ? 1 : 0)]));
                                     }
                                     if ((isClient || (!isServer && configOption.configType != CoreConfig.CONFIG_SYNCHED)) && sender instanceof EntityPlayerMP)
                                     {
                                         HitchCore.netWrapper.sendTo(new MessageCoreClientConfig(configOption.category, configOption.name, configOption.type.getID(), value), (EntityPlayerMP) sender);
-                                        sender.addChatMessage(new ChatComponentTranslation("commands.hitch.config.notify", args[1 + (isClient ? 1 : 0)], stringify(value)));
+                                        sender.addChatMessage(new ChatComponentText(CoreUtils.localize("commands.hitch.config.notify", args[1 + (isClient ? 1 : 0)], stringify(value))));
                                         return;
                                     }
                                     else if (sender.canUseCommand(OP_LEVEL, "hitch"))
                                     {
                                         CoreConfig.setProperty(configOption.category, configOption.name, value);
-                                        notifyOperators(sender, this, "commands.hitch.config.notify", args[1 + (isServer ? 1 : 0)], stringify(value));
+                                        notifyOperators(sender, this, CoreUtils.localize("commands.hitch.config.notify", args[1 + (isServer ? 1 : 0)], stringify(value)));
                                         return;
                                     }
                                     else
                                     {
-                                        throw new CommandException("commands.hitch.config.operatorError");
+                                        throw new CommandException(CoreUtils.localize("commands.hitch.config.operatorError"));
                                     }
                                 }
                             }
                         }
                     }
-                    throw new CommandException("commands.hitch.config.propertyError");
+                    throw new CommandException(CoreUtils.localize("commands.hitch.config.propertyError"));
                 }
                 else
                 {
-                    throw new WrongUsageException("commands.hitch.help.config");
+                    throw new WrongUsageException(CoreUtils.localize("commands.hitch.help.config"));
                 }
             }
             else if ("changes".equals(args[0]))
@@ -125,7 +125,7 @@ public class HitchCommand extends CommandBase
             }
         }
 
-        throw new WrongUsageException("commands.hitch.usage");
+        throw new WrongUsageException(CoreUtils.localize("commands.hitch.usage"));
     }
 
     private String stringify(Object value)
@@ -236,6 +236,7 @@ public class HitchCommand extends CommandBase
         }
         else if ("config".equals(args[0]))
         {
+            // TODO (hitch) add config property querying (no value provided, it will output the current value)
             if (args.length == 2)
             {
                 return getListOfStringsMatchingLastWord(args, CoreConfig.getConfigOptions(null, sender, "client", "server"));
@@ -264,6 +265,12 @@ public class HitchCommand extends CommandBase
 
         return null;
 
+    }
+
+    @Override
+    public boolean canCommandSenderUse(ICommandSender sender)
+    {
+        return true;
     }
 
 }

@@ -5,11 +5,15 @@ import com.google.common.collect.Iterables;
 import net.minecraft.client.Minecraft;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.event.ClickEvent;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.*;
+import net.minecraftforge.classloading.FMLForgePlugin;
 import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.InjectedModContainer;
 import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.ModContainer;
+import net.minecraftforge.oredict.OreDictionary;
 import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
@@ -39,6 +43,8 @@ public class CoreUtils
 
     public static final String URL_API_VERSION   = "http://api.hitchh1k3rsguide.com/minecraft/%s/version";
     public static final String URL_API_CHANGELOG = "http://api.hitchh1k3rsguide.com/minecraft/%s/change/%s";
+
+    public static Map<String, Object> devHandlers = new HashMap<String, Object>();
 
     private static Object modHandler;
     private static Object coreHandler;
@@ -74,7 +80,7 @@ public class CoreUtils
         {
             try
             {
-                coreMethod.invoke(coreHandler, modHandler, key, value);
+                coreMethod.invoke(coreHandler, getModHandler(), key, value);
             }
             catch (Exception ignored) {}
         }
@@ -107,6 +113,19 @@ public class CoreUtils
 
     public static void setHandlers(Object core, Object mod)
     {
+        if (!FMLForgePlugin.RUNTIME_DEOBF)
+        {
+            StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+            for (StackTraceElement trace : stack)
+            {
+                String name = trace.getClassName();
+                if (name.startsWith("com.hitchh1k3rsguide.") && !name.contains("$CORE_REPLACE$"))
+                {
+                    devHandlers.put(name.substring(21, name.indexOf('.', 21)), mod);
+                    break;
+                }
+            }
+        }
         modHandler = mod;
         try
         {
@@ -125,6 +144,22 @@ public class CoreUtils
 
     public static Object getModHandler()
     {
+        if (!FMLForgePlugin.RUNTIME_DEOBF)
+        {
+            StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+            for (StackTraceElement trace : stack)
+            {
+                String name = trace.getClassName();
+                if (name.startsWith("com.hitchh1k3rsguide.") && !name.contains("$CORE_REPLACE$"))
+                {
+                    String mod = name.substring(21, name.indexOf('.', 21));
+                    if (devHandlers.containsKey(mod))
+                    {
+                        return devHandlers.get(mod);
+                    }
+                }
+            }
+        }
         return modHandler;
     }
 
@@ -196,7 +231,14 @@ public class CoreUtils
                 }
                 else
                 {
-                    sender.addChatMessage(new ChatComponentText((String) line.getSecond()));
+                    if (DEDICATED_SERVER)
+                    {
+                        sender.addChatMessage(new ChatComponentText(((String) line.getSecond()).replaceAll("\u00A7.", "")));
+                    }
+                    else
+                    {
+                        sender.addChatMessage(new ChatComponentText((String) line.getSecond()));
+                    }
                 }
             }
             if (finalMessage != null)
@@ -253,7 +295,7 @@ public class CoreUtils
                         if (astring != null && astring.length == 2)
                         {
                             String s1 = astring[0];
-                            String s2 = pattern.matcher(astring[1]).replaceAll("%$1s").replaceAll("\\u00A7.", "");
+                            String s2 = pattern.matcher(astring[1]).replaceAll("%$1s").replaceAll("\u00A7.", "");
                             lang.put(s1, s2);
                         }
                     }
@@ -279,8 +321,6 @@ public class CoreUtils
         return "";
     }
 
-    // TODO (hitch) make sure calls to this don't do a double debug check!!!
-
     public static void debugErr(String message)
     {
         if (CoreConfig.debugMode)
@@ -296,27 +336,6 @@ public class CoreUtils
             HitchCore.LOGGER.info(message);
         }
     }
-
-    /*
-        public static int versionToInt(String version)
-        {
-            String[] v = version.split("\\.");
-            int[] vi = new int[3];
-            for (int i = 0; i < v.length; ++i)
-            {
-                vi[i] = Integer.parseInt(v[i]);
-            }
-            return (vi[0] * 10000) + (vi[1] * 100) + (vi[2]);
-        }
-
-        public static String intToVersion(int version)
-        {
-            int ver = version / 10000;
-            int maj = (version - (ver * 10000)) / 100;
-            int min = version - (ver * 10000) - (maj * 100);
-            return ver + "." + maj + (min > 0 ? "." + min : "");
-        }
-    */
 
     public static String readURL(String url)
     {
@@ -359,7 +378,7 @@ public class CoreUtils
         }
         else
         {
-            HitchCore.LOGGER.info(message.getUnformattedText().replaceAll("\\u00A7.", ""));
+            HitchCore.LOGGER.info(message.getUnformattedText().replaceAll("\u00A7.", ""));
         }
     }
 
@@ -467,6 +486,29 @@ public class CoreUtils
             }
         }
         logger.error("Ignoring patch failures...");
+    }
+
+    public static boolean isOre(ItemStack stack, String oreName)
+    {
+        int target = OreDictionary.getOreID(oreName);
+        for (int i : OreDictionary.getOreIDs(stack))
+        {
+            if (i == target)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static ItemStack idToStack(int id, int stackSize)
+    {
+        return new ItemStack(Item.getItemById(id >> 16), stackSize, (id & 65535));
+    }
+
+    public static int stackToId(ItemStack stack)
+    {
+        return (Item.getIdFromItem(stack.getItem()) << 16) + stack.getMetadata();
     }
 
 }
